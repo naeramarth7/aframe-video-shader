@@ -30,7 +30,7 @@ AFRAME.registerShader('video', {
    * For MeshBasicMaterial
    * @see http://threejs.org/docs/#Reference/Materials/MeshBasicMaterial
    */
-  
+
   schema: {
 
     /* For material */
@@ -106,7 +106,7 @@ AFRAME.registerShader('video', {
   /*================================
   =            material            =
   ================================*/
-  
+
   /**
    * Updating existing material.
    * @param {object} data - Material component data.
@@ -146,7 +146,7 @@ AFRAME.registerShader('video', {
    * @property {Object} canvasVideo - response from inline-video.js
    * @property {Date} timestamp - created at the texure
    */
-  
+
   __setTexure (data) {
     log('__setTexure', data)
     if (data.status === 'error') {
@@ -170,7 +170,7 @@ AFRAME.registerShader('video', {
     /* autoplay */
     if (typeof autoplay === 'boolean') { this.__autoplay = autoplay }
     else if (typeof autoplay === 'undefined') { this.__autoplay = this.schema.autoplay.default }
-    if (this.__autoplay && this.__frames) { this.play() } 
+    if (this.__autoplay && this.__frames) { this.play() }
 
     /* preload */
     if (typeof preload === 'boolean') { this.__preload = preload }
@@ -219,8 +219,8 @@ AFRAME.registerShader('video', {
 
     /* check if src is a url */
     const url = parseUrl(src)
-    if (url) {      
-      this.__getVideoSrc(url, cb)
+    if (url) {
+      this.__getVideoSrc({ src: url, cb })
       return
     }
 
@@ -236,7 +236,8 @@ AFRAME.registerShader('video', {
       const tagName = el.tagName.toLowerCase()
       if (tagName === 'video') {
         src = el.src
-        this.__getVideoSrc(src, cb, el)
+        const type = el.getAttribute('type')
+        this.__getVideoSrc({ src, type, cb, el })
       }
       else if (tagName === 'img') {
         message = `For <${tagName}> element, please use \`shader:flat\``
@@ -269,11 +270,17 @@ AFRAME.registerShader('video', {
    * @param  {function} cb - callback with the test result
    * @param  {VIDEO} el - video element
    */
-  __getVideoSrc (src, cb, el) {
+  __getVideoSrc (...args) {
+    args = args[0];
+
+    const src = args.src
+    const type = args.type
+    const cb = args.cb
+    const el = args.el
 
     /* if src is same as previous, ignore this */
     if (src === this.__textureSrc) { return }
-    
+
     /* check if we already get the srcData */
     let srcData = videoData[src]
     if (!srcData || !srcData.callbacks) {
@@ -304,7 +311,7 @@ AFRAME.registerShader('video', {
       element: el,
     }
 
-    inlineVideo(src, options, (err, canvasVideo) => {
+    inlineVideo({ src, type: type, opt: options, cb: (err, canvasVideo) => {
 
       if (err) {
 
@@ -327,10 +334,10 @@ AFRAME.registerShader('video', {
         /* overwrite */
         videoData[src] = newData
       }
-    })
+    }})
 
   },
-  
+
 
   /**
    * Query and validate a query selector,
@@ -349,7 +356,7 @@ AFRAME.registerShader('video', {
       return { error: 'no valid selector' }
     }
   },
-  
+
 
   /*================================
   =            playback            =
@@ -393,18 +400,18 @@ AFRAME.registerShader('video', {
    * Toggle playback. play if paused and pause if played.
    * @public
    */
-  
+
   togglePlayback () {
     if (this.paused()) { this.play() }
     else { this.pause() }
 
   },
-  
+
   /**
    * Return if the playback is paused.
    * @public
    * @return {boolean}
-   */  
+   */
   paused () {
     return this.__paused
   },
@@ -439,18 +446,18 @@ AFRAME.registerShader('video', {
     this.__clearCanvas()
     this.__draw(video)
   },
-  
+
 
   /*============================
   =            ready            =
   ============================*/
-  
+
   /**
    * setup video animation and play if autoplay is true
    * @private
    * @property {string} src - src url
    * @property {Object} canvasVideo - response from inline-video.js
-   */  
+   */
   __ready ({ src, canvasVideo }) {
     log('__ready')
     this.__textureSrc = src
@@ -464,17 +471,17 @@ AFRAME.registerShader('video', {
       this.pause()
     }
   },
-  
-  
+
+
 
   /*=============================
   =            reset            =
   =============================*/
-  
+
   /**
    * @private
    */
-  
+
   __reset () {
     this.pause()
     this.__clearCanvas()

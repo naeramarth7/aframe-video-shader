@@ -291,7 +291,7 @@
 	    /* check if src is a url */
 	    var url = parseUrl(src);
 	    if (url) {
-	      this.__getVideoSrc(url, cb);
+	      this.__getVideoSrc({ src: url, cb: cb });
 	      return;
 	    }
 
@@ -308,7 +308,8 @@
 	      var tagName = el.tagName.toLowerCase();
 	      if (tagName === 'video') {
 	        src = el.src;
-	        this.__getVideoSrc(src, cb, el);
+	        var type = el.getAttribute('type');
+	        this.__getVideoSrc({ src: src, type: type, cb: cb, el: el });
 	      } else if (tagName === 'img') {
 	        message = 'For <' + tagName + '> element, please use `shader:flat`';
 	      } else {
@@ -342,7 +343,17 @@
 	   * @param  {function} cb - callback with the test result
 	   * @param  {VIDEO} el - video element
 	   */
-	  __getVideoSrc: function __getVideoSrc(src, cb, el) {
+	  __getVideoSrc: function __getVideoSrc() {
+	    for (var _len = arguments.length, args = Array(_len), _key = 0; _key < _len; _key++) {
+	      args[_key] = arguments[_key];
+	    }
+
+	    args = args[0];
+
+	    var src = args.src;
+	    var type = args.type;
+	    var cb = args.cb;
+	    var el = args.el;
 
 	    /* if src is same as previous, ignore this */
 	    if (src === this.__textureSrc) {
@@ -377,40 +388,40 @@
 	      element: el
 	    };
 
-	    (0, _inlineVideo.inlineVideo)(src, options, function (err, canvasVideo) {
+	    (0, _inlineVideo.inlineVideo)({ src: src, type: type, opt: options, cb: function cb(err, canvasVideo) {
 
-	      if (err) {
-	        var _ret2 = function () {
+	        if (err) {
+	          var _ret2 = function () {
 
-	          /* create error data */
-	          var errData = createError(err, src);
-	          /* callbacks */
-	          if (srcData.callbacks) {
-	            srcData.callbacks.forEach(function (cb) {
-	              return cb(errData);
-	            });
-	            /* overwrite */
-	            videoData[src] = errData;
-	          }
-	          return {
-	            v: void 0
-	          };
-	        }();
+	            /* create error data */
+	            var errData = createError(err, src);
+	            /* callbacks */
+	            if (srcData.callbacks) {
+	              srcData.callbacks.forEach(function (cb) {
+	                return cb(errData);
+	              });
+	              /* overwrite */
+	              videoData[src] = errData;
+	            }
+	            return {
+	              v: void 0
+	            };
+	          }();
 
-	        if ((typeof _ret2 === 'undefined' ? 'undefined' : _typeof(_ret2)) === "object") return _ret2.v;
-	      }
+	          if ((typeof _ret2 === 'undefined' ? 'undefined' : _typeof(_ret2)) === "object") return _ret2.v;
+	        }
 
-	      /* store data */
-	      var newData = { status: 'success', src: src, canvasVideo: canvasVideo, timestamp: Date.now() };
-	      /* callbacks */
-	      if (srcData.callbacks) {
-	        srcData.callbacks.forEach(function (cb) {
-	          return cb(newData);
-	        });
-	        /* overwrite */
-	        videoData[src] = newData;
-	      }
-	    });
+	        /* store data */
+	        var newData = { status: 'success', src: src, canvasVideo: canvasVideo, timestamp: Date.now() };
+	        /* callbacks */
+	        if (srcData.callbacks) {
+	          srcData.callbacks.forEach(function (cb) {
+	            return cb(newData);
+	          });
+	          /* overwrite */
+	          videoData[src] = newData;
+	        }
+	      } });
 	  },
 
 
@@ -609,7 +620,18 @@
 
 	var noop = function noop() {};
 
-	exports.inlineVideo = function (source, opt, cb) {
+	exports.inlineVideo = function () {
+	  for (var _len = arguments.length, args = Array(_len), _key = 0; _key < _len; _key++) {
+	    args[_key] = arguments[_key];
+	  }
+
+	  args = args[0];
+
+	  var src = args.src;
+	  var type = args.type;
+	  var opt = args.opt;
+	  var cb = args.cb;
+
 	  var autoplay = opt.autoplay;
 	  var preload = opt.preload;
 	  var muted = opt.muted;
@@ -636,19 +658,34 @@
 
 	    /* load audio and muted video */
 	    (0, _runParallel2.default)([function (next) {
-	      _mediaElement2.default.video(source, Object.assign({}, opt, {
-	        muted: true,
-	        element: video
-	      }), next);
+	      _mediaElement2.default.video({
+	        sources: src,
+	        types: type,
+	        opt: Object.assign({}, opt, {
+	          muted: true,
+	          element: video
+	        }),
+	        cb: next
+	      });
 	    }, function (next) {
-	      _mediaElement2.default.audio(source, Object.assign({}, opt, {
-	        element: audio
-	      }), next);
+	      _mediaElement2.default.audio({
+	        sources: src,
+	        types: type,
+	        opt: Object.assign({}, opt, {
+	          element: audio
+	        }),
+	        cb: next
+	      });
 	    }], ready);
 	  } else {
-	    _mediaElement2.default.video(source, Object.assign({}, opt, {
-	      element: video
-	    }), ready);
+	    _mediaElement2.default.video({
+	      sources: src,
+	      types: type,
+	      opt: Object.assign({}, opt, {
+	        element: video
+	      }),
+	      cb: ready
+	    });
 	  }
 
 	  /*=============================
@@ -830,6 +867,9 @@
 	var queueIndex = -1;
 
 	function cleanUpNextTick() {
+	    if (!draining || !currentQueue) {
+	        return;
+	    }
 	    draining = false;
 	    if (currentQueue.length) {
 	        queue = currentQueue.concat(queue);
@@ -932,7 +972,18 @@
 	module.exports.video = simpleMediaElement.bind(null, 'video');
 	module.exports.audio = simpleMediaElement.bind(null, 'audio');
 
-	function simpleMediaElement(elementName, sources, opt, cb) {
+	function simpleMediaElement(elementName) {
+	  for (var _len = arguments.length, args = Array(_len > 1 ? _len - 1 : 0), _key = 1; _key < _len; _key++) {
+	    args[_key - 1] = arguments[_key];
+	  }
+
+	  args = args[0];
+
+	  var sources = args.sources;
+	  var types = args.types;
+	  var opt = args.opt;
+	  var cb = args.cb;
+
 	  if (typeof opt === 'function') {
 	    cb = opt;
 	    opt = {};
@@ -942,6 +993,7 @@
 
 	  if (!Array.isArray(sources)) {
 	    sources = [sources];
+	    types = [types];
 	  }
 
 	  var media = opt.element || document.createElement(elementName);
@@ -954,8 +1006,9 @@
 	  media.setAttribute('crossorigin', 'anonymous');
 	  media.setAttribute('webkit-playsinline', '');
 
-	  sources.forEach(function (source) {
-	    media.appendChild(createSource(source));
+	  sources.forEach(function (source, index) {
+	    var type = types[index];
+	    media.appendChild(createSource(source, type));
 	  });
 
 	  process.nextTick(start);
